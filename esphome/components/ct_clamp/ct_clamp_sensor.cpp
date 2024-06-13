@@ -36,15 +36,18 @@ void CTClampSensor::update() {
     const float rms_dc = this->sample_sum_ / this->num_samples_;
     const float rms_ac_squared = rms_ac_dc_squared - rms_dc * rms_dc;
     float rms_ac = 0;
+    float rms_ac_dc = 0;
     if (rms_ac_squared > 0)
       rms_ac = std::sqrt(rms_ac_squared);
-    ESP_LOGD(TAG, "'%s' - Raw AC Value: %.3fA after %" PRIu32 " different samples (%" PRIu32 " SPS)",
-             this->name_.c_str(), rms_ac, this->num_samples_, 1000 * this->num_samples_ / this->sample_duration_);
+    if (rms_ac_dc_squared > 0)
+      rms_ac_dc = std::sqrt(rms_ac_dc_squared);
+    ESP_LOGD(TAG, "'%s' - Raw AC Value: %.3fA (%.3fA) after %" PRIu32 " different samples (%" PRIu32 " SPS)",
+             this->name_.c_str(), rms_ac, rms_ac_dc, this->num_samples_, 1000 * this->num_samples_ / this->sample_duration_);
     this->publish_state(rms_ac);
   });
 
   // Set sampling values
-  this->last_value_ = 0.0;
+  this->last_sample_at = 0;
   this->num_samples_ = 0;
   this->sample_sum_ = 0.0f;
   this->sample_squared_sum_ = 0.0f;
@@ -55,16 +58,18 @@ void CTClampSensor::loop() {
   if (!this->is_sampling_)
     return;
 
+  // Get current time
+  unsigned long current_time = micros();
+
+  if((current_time - this->last_sample_at) < 550)
+    return; // ADC not ready yet
+
   // Perform a single sample
   float value = this->source_->sample();
   if (std::isnan(value))
     return;
 
-  // Assuming a sine wave, avoid requesting values faster than the ADC can provide them
-  if (this->last_value_ == value)
-    return;
-  this->last_value_ = value;
-
+  this->last_sample_at = current_time;
   this->num_samples_++;
   this->sample_sum_ += value;
   this->sample_squared_sum_ += value * value;

@@ -13,6 +13,9 @@ void TimeBasedCover::dump_config() {
   LOG_COVER("", "Time Based Cover", this);
   ESP_LOGCONFIG(TAG, "  Open Duration: %.1fs", this->open_duration_ / 1e3f);
   ESP_LOGCONFIG(TAG, "  Close Duration: %.1fs", this->close_duration_ / 1e3f);
+
+  if (this->tilt_duration_ > 0)
+    ESP_LOGCONFIG(TAG, "  Tilt Duration: %ums", this->tilt_duration_);
 }
 void TimeBasedCover::setup() {
   auto restore = this->restore_state_();
@@ -54,6 +57,7 @@ CoverTraits TimeBasedCover::get_traits() {
   traits.set_supports_stop(true);
   traits.set_supports_position(true);
   traits.set_supports_toggle(true);
+  traits.set_supports_tilt(this->tilt_duration_ > 0);
   traits.set_is_assumed_state(this->assumed_state_);
   return traits;
 }
@@ -100,6 +104,26 @@ void TimeBasedCover::control(const CoverCall &call) {
         this->position = pos == COVER_CLOSED ? COVER_OPEN : COVER_CLOSED;
       }
       this->target_position_ = pos;
+      this->start_direction_(op);
+    }
+  }
+
+  if (call.get_tilt().has_value()) {
+    auto requested_tilt = *call.get_tilt();
+    if (requested_tilt != this->tilt) {
+      CoverOperation op;
+      uint32_t operation_duration_ms;
+      if (requested_tilt < this->tilt) {
+        op = COVER_OPERATION_CLOSING;
+        operation_duration_ms = this->close_duration_;
+      } else {
+        op = COVER_OPERATION_OPENING;
+        operation_duration_ms = this->open_duration_;
+      }
+
+      const auto tilt_change_duration_ms = (requested_tilt - this->tilt) * this->tilt_duration_;
+      const auto new_pos = tilt_change_duration_ms / operation_duration_ms;
+      this->target_position_ += new_pos;
       this->start_direction_(op);
     }
   }
@@ -173,8 +197,13 @@ void TimeBasedCover::recompute_position_() {
   }
 
   const uint32_t now = millis();
-  this->position += dir * (now - this->last_recompute_time_) / action_dur;
+  const uint32_t step_duration = now - this->last_recompute_time_;
+
+  this->position += dir * (step_duration) / action_dur;
   this->position = clamp(this->position, 0.0f, 1.0f);
+
+  this->tilt += dir * (step_duration) / this->tilt_duration_;
+  this->tilt = clamp(this->tilt, 0.0f, 1.0f);
 
   this->last_recompute_time_ = now;
 }

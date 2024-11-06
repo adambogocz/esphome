@@ -10,3 +10,4 @@ cover:
     close_action:
       - logger.log: close_action
     close_duration: 4.5min
+    tilt_duration: 1s

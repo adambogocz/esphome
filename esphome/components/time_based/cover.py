@@ -1,15 +1,15 @@
-import esphome.codegen as cg
-import esphome.config_validation as cv
 from esphome import automation
+import esphome.codegen as cg
 from esphome.components import cover
+import esphome.config_validation as cv
 from esphome.const import (
+    CONF_ASSUMED_STATE,
     CONF_CLOSE_ACTION,
     CONF_CLOSE_DURATION,
     CONF_ID,
     CONF_OPEN_ACTION,
     CONF_OPEN_DURATION,
     CONF_STOP_ACTION,
-    CONF_ASSUMED_STATE,
 )
 
 time_based_ns = cg.esphome_ns.namespace("time_based")
@@ -17,6 +17,7 @@ TimeBasedCover = time_based_ns.class_("TimeBasedCover", cover.Cover, cg.Componen
 
 CONF_HAS_BUILT_IN_ENDSTOP = "has_built_in_endstop"
 CONF_MANUAL_CONTROL = "manual_control"
+CONF_TILT_DURATION = "tilt_duration"
 
 CONFIG_SCHEMA = cover.COVER_SCHEMA.extend(
     {
@@ -29,6 +30,9 @@ CONFIG_SCHEMA = cover.COVER_SCHEMA.extend(
         cv.Optional(CONF_HAS_BUILT_IN_ENDSTOP, default=False): cv.boolean,
         cv.Optional(CONF_MANUAL_CONTROL, default=False): cv.boolean,
         cv.Optional(CONF_ASSUMED_STATE, default=True): cv.boolean,
+        cv.Optional(
+            CONF_TILT_DURATION, default=0
+        ): cv.positive_time_period_milliseconds,
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
@@ -55,3 +59,4 @@ async def to_code(config):
     cg.add(var.set_has_built_in_endstop(config[CONF_HAS_BUILT_IN_ENDSTOP]))
     cg.add(var.set_manual_control(config[CONF_MANUAL_CONTROL]))
     cg.add(var.set_assumed_state(config[CONF_ASSUMED_STATE]))
+    cg.add(var.set_tilt_duration(config[CONF_TILT_DURATION]))

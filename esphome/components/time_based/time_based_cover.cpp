@@ -16,6 +16,8 @@ void TimeBasedCover::dump_config() {
 
   if (this->tilt_duration_ > 0)
     ESP_LOGCONFIG(TAG, "  Tilt Duration: %ums", this->tilt_duration_);
+
+  ESP_LOGCONFIG(TAG, "  Activation delay: %ums", this->activation_delay_);
 }
 void TimeBasedCover::setup() {
   auto restore = this->restore_state_();
@@ -122,8 +124,9 @@ void TimeBasedCover::control(const CoverCall &call) {
       }
 
       const auto tilt_change_duration_ms = (requested_tilt - this->tilt) * this->tilt_duration_;
-      const auto new_pos = tilt_change_duration_ms / operation_duration_ms;
-      this->target_position_ += new_pos;
+      const auto position_shift = tilt_change_duration_ms / operation_duration_ms;
+
+      this->target_position_ = this->position + position_shift;
       this->start_direction_(op);
     }
   }
@@ -176,6 +179,7 @@ void TimeBasedCover::start_direction_(CoverOperation dir) {
   this->stop_prev_trigger_();
   trig->trigger();
   this->prev_command_trigger_ = trig;
+  this->remaining_activation_delay_ = this->activation_delay_;
 }
 void TimeBasedCover::recompute_position_() {
   if (this->current_operation == COVER_OPERATION_IDLE)
@@ -199,11 +203,17 @@ void TimeBasedCover::recompute_position_() {
   const uint32_t now = millis();
   const uint32_t step_duration = now - this->last_recompute_time_;
 
-  this->position += dir * (step_duration) / action_dur;
-  this->position = clamp(this->position, 0.0f, 1.0f);
+  this->remaining_activation_delay_ -= step_duration;
 
-  this->tilt += dir * (step_duration) / this->tilt_duration_;
-  this->tilt = clamp(this->tilt, 0.0f, 1.0f);
+  if (this->remaining_activation_delay_ <= 0) {
+    this->remaining_activation_delay_ = 0;
+
+    this->position += dir * (step_duration) / action_dur;
+    this->position = clamp(this->position, 0.0f, 1.0f);
+
+    this->tilt += dir * (step_duration) / this->tilt_duration_;
+    this->tilt = clamp(this->tilt, 0.0f, 1.0f);
+  }
 
   this->last_recompute_time_ = now;
 }

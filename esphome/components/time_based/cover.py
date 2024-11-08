@@ -18,6 +18,7 @@ TimeBasedCover = time_based_ns.class_("TimeBasedCover", cover.Cover, cg.Componen
 CONF_HAS_BUILT_IN_ENDSTOP = "has_built_in_endstop"
 CONF_MANUAL_CONTROL = "manual_control"
 CONF_TILT_DURATION = "tilt_duration"
+CONF_ACTIVATION_DELAY = "activation_delay"
 
 CONFIG_SCHEMA = cover.COVER_SCHEMA.extend(
     {
@@ -31,7 +32,10 @@ CONFIG_SCHEMA = cover.COVER_SCHEMA.extend(
         cv.Optional(CONF_MANUAL_CONTROL, default=False): cv.boolean,
         cv.Optional(CONF_ASSUMED_STATE, default=True): cv.boolean,
         cv.Optional(
-            CONF_TILT_DURATION, default=0
+            CONF_TILT_DURATION, default="0s"
+        ): cv.positive_time_period_milliseconds,
+        cv.Optional(
+            CONF_ACTIVATION_DELAY, default="0s"
         ): cv.positive_time_period_milliseconds,
     }
 ).extend(cv.COMPONENT_SCHEMA)
@@ -60,3 +64,4 @@ async def to_code(config):
     cg.add(var.set_manual_control(config[CONF_MANUAL_CONTROL]))
     cg.add(var.set_assumed_state(config[CONF_ASSUMED_STATE]))
     cg.add(var.set_tilt_duration(config[CONF_TILT_DURATION]))
+    cg.add(var.set_activation_delay(config[CONF_ACTIVATION_DELAY]))

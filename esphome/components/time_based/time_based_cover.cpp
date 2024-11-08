@@ -2,6 +2,8 @@
 #include "esphome/core/log.h"
 #include "esphome/core/hal.h"
 
+#include <cinttypes>
+
 namespace esphome {
 namespace time_based {
 
@@ -15,9 +17,9 @@ void TimeBasedCover::dump_config() {
   ESP_LOGCONFIG(TAG, "  Close Duration: %.1fs", this->close_duration_ / 1e3f);
 
   if (this->tilt_duration_ > 0)
-    ESP_LOGCONFIG(TAG, "  Tilt Duration: %ums", this->tilt_duration_);
+    ESP_LOGCONFIG(TAG, "  Tilt Duration: %" PRIu32 "ms", this->tilt_duration_);
 
-  ESP_LOGCONFIG(TAG, "  Activation delay: %ums", this->activation_delay_);
+  ESP_LOGCONFIG(TAG, "  Activation delay: %" PRIu32 "ms", this->activation_delay_);
 }
 void TimeBasedCover::setup() {
   auto restore = this->restore_state_();

@@ -4,6 +4,8 @@
 #include "esphome/core/hal.h"
 #include "esphome/components/sensor/sensor.h"
 
+#include <cinttypes>
+
 #if defined(USE_ESP32) && !defined(USE_ESP32_VARIANT_ESP32C3)
 #include <driver/pcnt.h>
 #define HAS_PCNT
@@ -53,6 +55,7 @@ struct HwPulseCounterStorage : public PulseCounterStorageBase {
   pulse_counter_t read_raw_value() override;
 
   pcnt_unit_t pcnt_unit;
+  pcnt_channel_t pcnt_channel;
 };
 #endif
 

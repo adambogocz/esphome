@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cinttypes>
+#include <cmath>
+
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/sensirion_common/i2c_sensirion.h"
@@ -7,8 +10,6 @@
 #include "esphome/core/preferences.h"
 #include <VOCGasIndexAlgorithm.h>
 #include <NOxGasIndexAlgorithm.h>
-
-#include <cmath>
 
 namespace esphome {
 namespace sgp4x {
@@ -72,7 +73,7 @@ class SGP4xComponent : public PollingComponent, public sensor::Sensor, public se
 
   void setup() override;
   void update() override;
-  void update_gas_indices();
+  void take_sample();
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
   void set_store_baseline(bool store_baseline) { store_baseline_ = store_baseline; }
@@ -107,8 +108,10 @@ class SGP4xComponent : public PollingComponent, public sensor::Sensor, public se
   sensor::Sensor *temperature_sensor_{nullptr};
   int16_t sensirion_init_sensors_();
 
-  bool measure_gas_indices_(int32_t &voc, int32_t &nox);
-  bool measure_raw_(uint16_t &voc_raw, uint16_t &nox_raw);
+  void update_gas_indices_();
+  void measure_raw_();
+  uint16_t voc_sraw_;
+  uint16_t nox_sraw_;
 
   SgpType sgp_type_{SGP40};
   uint64_t serial_number_;

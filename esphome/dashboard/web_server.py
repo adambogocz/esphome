@@ -320,12 +320,12 @@ class EsphomePortCommandWebSocket(EsphomeCommandWebSocket):
             and "api" in entry.loaded_integrations
         ):
             if (mdns := dashboard.mdns_status) and (
-                address := await mdns.async_resolve_host(entry.name)
+                address_list := await mdns.async_resolve_host(entry.name)
             ):
                 # Use the IP address if available but only
                 # if the API is loaded and the device is online
                 # since MQTT logging will not work otherwise
-                port = address
+                port = address_list[0]
             elif (
                 entry.address
                 and (

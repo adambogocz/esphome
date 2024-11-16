@@ -1,8 +1,8 @@
-import esphome.codegen as cg
-import esphome.config_validation as cv
 from esphome import pins
+import esphome.codegen as cg
 from esphome.components import output
-from esphome.const import CONF_ID, CONF_MIN_POWER, CONF_METHOD
+import esphome.config_validation as cv
+from esphome.const import CONF_ID, CONF_METHOD, CONF_MIN_POWER
 
 CODEOWNERS = ["@glmnet"]
 
@@ -16,8 +16,15 @@ DIM_METHODS = {
     "TRAILING": DimMethod.DIM_METHOD_TRAILING,
 }
 
+ZeroCrossingType = ac_dimmer_ns.enum("ZeroCrossingType")
+ZC_TYPES = {
+    "RISING_EDGE": ZeroCrossingType.ZERO_CROSSING_TYPE_RISING_EDGE,
+    "ANY_EDGE": ZeroCrossingType.ZERO_CROSSING_TYPE_ANY_EDGE,
+}
+
 CONF_GATE_PIN = "gate_pin"
 CONF_ZERO_CROSS_PIN = "zero_cross_pin"
+CONF_ZERO_CROSS_TYPE = "zero_cross_type"
 CONF_INIT_WITH_HALF_CYCLE = "init_with_half_cycle"
 CONFIG_SCHEMA = cv.All(
     output.FLOAT_OUTPUT_SCHEMA.extend(
@@ -28,6 +35,9 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_INIT_WITH_HALF_CYCLE, default=True): cv.boolean,
             cv.Optional(CONF_METHOD, default="leading pulse"): cv.enum(
                 DIM_METHODS, upper=True, space="_"
+            ),
+            cv.Optional(CONF_ZERO_CROSS_TYPE, default="RISING_EDGE"): cv.enum(
+                ZC_TYPES, upper=True
             ),
         }
     ).extend(cv.COMPONENT_SCHEMA),
@@ -50,3 +60,4 @@ async def to_code(config):
     cg.add(var.set_zero_cross_pin(pin))
     cg.add(var.set_init_with_half_cycle(config[CONF_INIT_WITH_HALF_CYCLE]))
     cg.add(var.set_method(config[CONF_METHOD]))
+    cg.add(var.set_zero_crossing_type(config[CONF_ZERO_CROSS_TYPE]))

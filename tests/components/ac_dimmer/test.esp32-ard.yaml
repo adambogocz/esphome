@@ -5,3 +5,4 @@ output:
       number: 12
     zero_cross_pin:
       number: 13
+    zero_cross_type: ANY_EDGE

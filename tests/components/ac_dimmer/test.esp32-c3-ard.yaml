@@ -5,3 +5,4 @@ output:
       number: 5
     zero_cross_pin:
       number: 6
+    zero_cross_type: RISING_EDGE

@@ -33,3 +33,14 @@ climate:
     away_config:
       default_target_temperature_low: 16°C
       default_target_temperature_high: 20°C
+    default_preset: eco
+    presets:
+      - name: home
+        default_target_temperature_low: 47 °C
+        default_target_temperature_high: 50 °C
+      - name: boost
+        default_target_temperature_low: 65 °C
+        default_target_temperature_high: 72 °C
+      - name: eco
+        default_target_temperature_low: 47 °C
+        default_target_temperature_high: 57 °C

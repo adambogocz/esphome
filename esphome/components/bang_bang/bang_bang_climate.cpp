@@ -38,7 +38,7 @@ void BangBangClimate::setup() {
     } else if (supports_heat_) {
       this->mode = climate::CLIMATE_MODE_HEAT;
     }
-    this->change_away_(false);
+    this->change_preset_internal_(this->normal_config_);
   }
 }
 void BangBangClimate::control(const climate::ClimateCall &call) {
@@ -48,8 +48,12 @@ void BangBangClimate::control(const climate::ClimateCall &call) {
     this->target_temperature_low = *call.get_target_temperature_low();
   if (call.get_target_temperature_high().has_value())
     this->target_temperature_high = *call.get_target_temperature_high();
-  if (call.get_preset().has_value())
-    this->change_away_(*call.get_preset() == climate::CLIMATE_PRESET_AWAY);
+  if (call.get_preset().has_value()) {
+    this->change_preset_(*call.get_preset());
+  }
+  if (call.get_custom_preset().has_value()) {
+    // this->change_custom_preset_(*call.get_custom_preset());
+  }
 
   this->compute_state_();
   this->publish_state();
@@ -69,12 +73,14 @@ climate::ClimateTraits BangBangClimate::traits() {
   if (supports_cool_ && supports_heat_)
     traits.add_supported_mode(climate::CLIMATE_MODE_HEAT_COOL);
   traits.set_supports_two_point_target_temperature(true);
-  if (supports_away_) {
-    traits.set_supported_presets({
-        climate::CLIMATE_PRESET_HOME,
-        climate::CLIMATE_PRESET_AWAY,
-    });
+
+  for (auto &it : this->preset_config_) {
+    traits.add_supported_preset(it.first);
   }
+  for (auto &it : this->custom_preset_config_) {
+    traits.add_supported_custom_preset(it.first);
+  }
+
   traits.set_supports_action(true);
   return traits;
 }
@@ -166,23 +172,51 @@ void BangBangClimate::switch_to_action_(climate::ClimateAction action) {
   this->prev_trigger_ = trig;
   this->publish_state();
 }
-void BangBangClimate::change_away_(bool away) {
-  if (!away) {
-    this->target_temperature_low = this->normal_config_.default_temperature_low;
-    this->target_temperature_high = this->normal_config_.default_temperature_high;
-  } else {
-    this->target_temperature_low = this->away_config_.default_temperature_low;
-    this->target_temperature_high = this->away_config_.default_temperature_high;
-  }
-  this->preset = away ? climate::CLIMATE_PRESET_AWAY : climate::CLIMATE_PRESET_HOME;
-}
+
 void BangBangClimate::set_normal_config(const BangBangClimateTargetTempConfig &normal_config) {
   this->normal_config_ = normal_config;
 }
 void BangBangClimate::set_away_config(const BangBangClimateTargetTempConfig &away_config) {
-  this->supports_away_ = true;
-  this->away_config_ = away_config;
+  this->preset_config_[climate::CLIMATE_PRESET_AWAY] = away_config;
 }
+void BangBangClimate::change_preset_(climate::ClimatePreset preset) {
+  auto config = this->preset_config_.find(preset);
+
+  if (config != this->preset_config_.end()) {
+    ESP_LOGI(TAG, "Preset %s requested", LOG_STR_ARG(climate::climate_preset_to_string(preset)));
+    if (this->change_preset_internal_(config->second) || (!this->preset.has_value()) ||
+        this->preset.value() != preset) {
+      // Fire any preset changed trigger if defined
+      Trigger<> *trig = this->preset_change_trigger_;
+      this->preset = preset;
+      if (trig != nullptr) {
+        trig->trigger();
+      }
+
+      ESP_LOGI(TAG, "Preset %s applied", LOG_STR_ARG(climate::climate_preset_to_string(preset)));
+    } else {
+      ESP_LOGI(TAG, "No changes required to apply preset %s", LOG_STR_ARG(climate::climate_preset_to_string(preset)));
+    }
+    this->custom_preset.reset();
+    this->preset = preset;
+  } else {
+    ESP_LOGE(TAG, "Preset %s is not configured, ignoring.", LOG_STR_ARG(climate::climate_preset_to_string(preset)));
+  }
+}
+
+template<typename Out, typename In = Out> Out exchange(Out &output, In &&newValue) {
+  auto old = output;
+  output = std::forward<In>(newValue);
+  return old;
+}
+
+bool BangBangClimate::change_preset_internal_(const BangBangClimateTargetTempConfig &config) {
+  const auto old_low = exchange(this->target_temperature_low, config.default_temperature_low);
+  const auto old_high = exchange(this->target_temperature_high, config.default_temperature_high);
+
+  return old_low != config.default_temperature_low || old_high != config.default_temperature_high;
+}
+
 BangBangClimate::BangBangClimate()
     : idle_trigger_(new Trigger<>()), cool_trigger_(new Trigger<>()), heat_trigger_(new Trigger<>()) {}
 void BangBangClimate::set_sensor(sensor::Sensor *sensor) { this->sensor_ = sensor; }
@@ -196,7 +230,7 @@ void BangBangClimate::dump_config() {
   LOG_CLIMATE("", "Bang Bang Climate", this);
   ESP_LOGCONFIG(TAG, "  Supports HEAT: %s", YESNO(this->supports_heat_));
   ESP_LOGCONFIG(TAG, "  Supports COOL: %s", YESNO(this->supports_cool_));
-  ESP_LOGCONFIG(TAG, "  Supports AWAY mode: %s", YESNO(this->supports_away_));
+  ESP_LOGCONFIG(TAG, "  Supports AWAY mode: %s", YESNO(this->preset_config_.count(climate::CLIMATE_PRESET_AWAY) > 0));
   ESP_LOGCONFIG(TAG, "  Default Target Temperature Low: %.2f°C", this->normal_config_.default_temperature_low);
   ESP_LOGCONFIG(TAG, "  Default Target Temperature High: %.2f°C", this->normal_config_.default_temperature_high);
 }

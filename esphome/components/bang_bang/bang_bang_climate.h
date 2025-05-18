@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include "esphome/core/component.h"
 #include "esphome/core/automation.h"
 #include "esphome/components/climate/climate.h"
@@ -36,8 +38,6 @@ class BangBangClimate : public climate::Climate, public Component {
  protected:
   /// Override control to change settings of the climate device.
   void control(const climate::ClimateCall &call) override;
-  /// Change the away setting, will reset target temperatures to defaults.
-  void change_away_(bool away);
   /// Return the traits of this controller.
   climate::ClimateTraits traits() override;
 
@@ -46,6 +46,10 @@ class BangBangClimate : public climate::Climate, public Component {
 
   /// Switch the climate device to the given climate mode.
   void switch_to_action_(climate::ClimateAction action);
+
+  void change_preset_(climate::ClimatePreset preset);
+
+  bool change_preset_internal_(const BangBangClimateTargetTempConfig &config);
 
   /// The sensor used for getting the current temperature
   sensor::Sensor *sensor_{nullptr};
@@ -80,9 +84,19 @@ class BangBangClimate : public climate::Climate, public Component {
    */
   Trigger<> *prev_trigger_{nullptr};
 
+  Trigger<> *preset_change_trigger_{nullptr};
+
   BangBangClimateTargetTempConfig normal_config_{};
-  bool supports_away_{false};
-  BangBangClimateTargetTempConfig away_config_{};
+
+  /// The set of standard preset configurations this thermostat supports (Eg. AWAY, ECO, etc)
+  std::map<climate::ClimatePreset, BangBangClimateTargetTempConfig> preset_config_{};
+  /// The set of custom preset configurations this thermostat supports (eg. "My Custom Preset")
+  std::map<std::string, BangBangClimateTargetTempConfig> custom_preset_config_{};
+
+  /// Default standard preset to use on start up
+  climate::ClimatePreset default_preset_{};
+  /// Default custom preset to use on start up
+  std::string default_custom_preset_{};
 };
 
 }  // namespace bang_bang

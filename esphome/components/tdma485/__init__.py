@@ -67,7 +67,7 @@ async def to_code(config):
     )
 
     if CONF_DIRECTION_PIN in config:
-        pin = await cg.gpio_output_pin_expression(config[CONF_DIRECTION_PIN])
+        pin = await cg.gpio_pin_expression(config[CONF_DIRECTION_PIN])
         cg.add(var.set_direction_pin(pin))
 
     # Build on_event automations (monitor role)
@@ -76,6 +76,6 @@ async def to_code(config):
         args = [
             (cg.uint8, "node_id"),
             (cg.uint8, "event_type"),
-            (cg.std_vector(cg.uint8), "payload"),
+            (cg.std_vector.template(cg.uint8), "payload"),
         ]
         await automation.build_automation(var.get_on_event_trigger(), args, conf)

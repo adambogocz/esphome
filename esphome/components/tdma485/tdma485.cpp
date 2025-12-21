@@ -410,16 +410,14 @@ void TDMA485::node_cycle_() {
     delayMicroseconds(50);
   }
 
-  // In our slot
-  delayMicroseconds(this->guard_time_us_);
-  if (have_event) {
-    this->send_claim_();
-  }
-
   // If no event to send, we're done for this cycle
   if (!have_event) {
     return;
   }
+
+  // In our slot
+  delayMicroseconds(this->guard_time_us_);
+  this->send_claim_();
 
   // Wait for grant
   uint8_t seq = 0;

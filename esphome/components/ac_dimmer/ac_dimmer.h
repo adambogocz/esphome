@@ -8,6 +8,8 @@ namespace esphome::ac_dimmer {
 
 enum DimMethod { DIM_METHOD_LEADING_PULSE = 0, DIM_METHOD_LEADING, DIM_METHOD_TRAILING };
 
+enum ZeroCrossingType { ZERO_CROSSING_TYPE_FALLING_EDGE, ZERO_CROSSING_TYPE_ANY_EDGE };
+
 struct AcDimmerDataStore {
   /// Zero-cross pin
   ISRInternalGPIOPin zero_cross_pin;
@@ -50,6 +52,7 @@ class AcDimmer : public output::FloatOutput, public Component {
   void set_zero_cross_pin(InternalGPIOPin *zero_cross_pin) { zero_cross_pin_ = zero_cross_pin; }
   void set_init_with_half_cycle(bool init_with_half_cycle) { init_with_half_cycle_ = init_with_half_cycle; }
   void set_method(DimMethod method) { method_ = method; }
+  void set_zero_crossing_type(ZeroCrossingType zero_crossing_type) { this->zero_crossing_type_ = zero_crossing_type; }
 
  protected:
   void write_state(float state) override;
@@ -59,6 +62,7 @@ class AcDimmer : public output::FloatOutput, public Component {
   AcDimmerDataStore store_;
   bool init_with_half_cycle_;
   DimMethod method_;
+  ZeroCrossingType zero_crossing_type_;
 };
 
 }  // namespace esphome::ac_dimmer
